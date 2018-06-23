@@ -1,17 +1,6 @@
 /*
- * Copyright 2010-2016 JetBrains s.r.o.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright 2010-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
+ * that can be found in the license/LICENSE.txt file.
  */
 
 package org.jetbrains.kotlin.backend.jvm.lower
@@ -23,8 +12,6 @@ import org.jetbrains.kotlin.backend.common.bridges.findInterfaceImplementation
 import org.jetbrains.kotlin.backend.common.bridges.generateBridgesForFunctionDescriptor
 import org.jetbrains.kotlin.backend.common.lower.createIrBuilder
 import org.jetbrains.kotlin.backend.common.lower.irBlockBody
-import org.jetbrains.kotlin.backend.common.lower.irIfThen
-import org.jetbrains.kotlin.backend.common.lower.irNot
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredStatementOrigin
 import org.jetbrains.kotlin.backend.jvm.descriptors.DefaultImplsClassDescriptor
@@ -43,21 +30,16 @@ import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.CallableMemberDescriptor.Kind.DECLARATION
 import org.jetbrains.kotlin.descriptors.annotations.Annotations
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
-import org.jetbrains.kotlin.ir.builders.*
+import org.jetbrains.kotlin.ir.builders.IrBlockBodyBuilder
+import org.jetbrains.kotlin.ir.builders.irIs
+import org.jetbrains.kotlin.ir.builders.irNotEquals
+import org.jetbrains.kotlin.ir.builders.irNull
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
-import org.jetbrains.kotlin.ir.expressions.IrExpression
-import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
-import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrGetValueImpl
-import org.jetbrains.kotlin.ir.expressions.impl.IrReturnImpl
-import org.jetbrains.kotlin.ir.symbols.impl.IrSimpleFunctionSymbolImpl
-import org.jetbrains.kotlin.ir.symbols.impl.IrVariableSymbolImpl
-import org.jetbrains.kotlin.ir.util.createParameterDeclarations
 import org.jetbrains.kotlin.load.java.BuiltinMethodsWithSpecialGenericSignature
-import org.jetbrains.kotlin.load.java.BuiltinMethodsWithSpecialGenericSignature.TypeSafeBarrierDescription.*
 import org.jetbrains.kotlin.load.java.getOverriddenBuiltinReflectingJvmDescriptor
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.DescriptorToSourceUtils.getSourceFromDescriptor
@@ -173,15 +155,8 @@ class BridgeLowering(val context: JvmBackendContext) : ClassLoweringPass {
                 if (!isThereOverriddenInKotlinClass(descriptor)) {
                     // TODO: reimplement getVisibilityAccessFlag(descriptor)
                     val visibility = if (descriptor.isToArrayFromCollection()) Visibilities.PUBLIC else descriptor.visibility
-                    val irFunction = IrFunctionImpl(
-                        UNDEFINED_OFFSET,
-                        UNDEFINED_OFFSET,
-                        IrDeclarationOrigin.DEFINED,
-                        IrSimpleFunctionSymbolImpl(descriptor),
-                        visibility = visibility,
-                        modality = Modality.ABSTRACT
-                    )
-                    irFunction.createParameterDeclarations()
+                    val irFunction = TODO()
+//                    irFunction.createParameterDeclarations()
 
                     irClass.declarations.add(irFunction)
                 }
@@ -214,7 +189,7 @@ class BridgeLowering(val context: JvmBackendContext) : ClassLoweringPass {
         )
 
         val irFunction = IrFunctionImpl(UNDEFINED_OFFSET, UNDEFINED_OFFSET, IrDeclarationOrigin.BRIDGE, bridgeDescriptorForIrFunction)
-        irFunction.createParameterDeclarations()
+//        irFunction.createParameterDeclarations()
 
         context.createIrBuilder(irFunction.symbol).irBlockBody(irFunction) {
             //TODO
@@ -224,40 +199,40 @@ class BridgeLowering(val context: JvmBackendContext) : ClassLoweringPass {
             }
 
             val implementation = if (isSpecialBridge) delegateTo.copyAsDeclaration() else delegateTo.descriptor
-            val call = IrCallImpl(
-                UNDEFINED_OFFSET, UNDEFINED_OFFSET,
-                implementation,
-                null, JvmLoweredStatementOrigin.BRIDGE_DELEGATION,
+//            val call = IrCallImpl(
+//                UNDEFINED_OFFSET, UNDEFINED_OFFSET,
+//                implementation,
+//                null, JvmLoweredStatementOrigin.BRIDGE_DELEGATION,
                 if (isStubDeclarationWithDelegationToSuper) getSuperClassDescriptor(
                     descriptor.containingDeclaration as ClassDescriptor
                 ) else null
-            )
-            call.dispatchReceiver = IrGetValueImpl(
-                UNDEFINED_OFFSET,
-                UNDEFINED_OFFSET,
-                irFunction.dispatchReceiverParameter!!.symbol,
-                JvmLoweredStatementOrigin.BRIDGE_DELEGATION
-            )
-            irFunction.extensionReceiverParameter?.let {
-                call.extensionReceiver = IrGetValueImpl(
-                    UNDEFINED_OFFSET,
-                    UNDEFINED_OFFSET,
-                    it.symbol,
-                    JvmLoweredStatementOrigin.BRIDGE_DELEGATION
-                )
-            }
-            irFunction.valueParameters.mapIndexed { i, valueParameter ->
-                call.putValueArgument(
-                    i,
-                    IrGetValueImpl(
-                        UNDEFINED_OFFSET,
-                        UNDEFINED_OFFSET,
-                        valueParameter.symbol,
-                        JvmLoweredStatementOrigin.BRIDGE_DELEGATION
-                    )
-                )
-            }
-            +IrReturnImpl(UNDEFINED_OFFSET, UNDEFINED_OFFSET, irFunction.symbol, call)
+//            )
+//            call.dispatchReceiver = IrGetValueImpl(
+//                UNDEFINED_OFFSET,
+//                UNDEFINED_OFFSET,
+//                irFunction.dispatchReceiverParameter!!.symbol,
+//                JvmLoweredStatementOrigin.BRIDGE_DELEGATION
+//            )
+//            irFunction.extensionReceiverParameter?.let {
+//                call.extensionReceiver = IrGetValueImpl(
+//                    UNDEFINED_OFFSET,
+//                    UNDEFINED_OFFSET,
+//                    it.symbol,
+//                    JvmLoweredStatementOrigin.BRIDGE_DELEGATION
+//                )
+//            }
+//            irFunction.valueParameters.mapIndexed { i, valueParameter ->
+//                call.putValueArgument(
+//                    i,
+//                    IrGetValueImpl(
+//                        UNDEFINED_OFFSET,
+//                        UNDEFINED_OFFSET,
+//                        valueParameter.symbol,
+//                        JvmLoweredStatementOrigin.BRIDGE_DELEGATION
+//                    )
+//                )
+//            }
+//            +IrReturnImpl(UNDEFINED_OFFSET, UNDEFINED_OFFSET, irFunction.symbol, call)
         }.apply {
             irFunction.body = this
         }
@@ -292,28 +267,28 @@ class BridgeLowering(val context: JvmBackendContext) : ClassLoweringPass {
             if (delegateParameterTypes == null || OBJECT_TYPE == delegateParameterTypes[i]) {
                 irNotEquals(checkValue, irNull())
             } else {
-                irIs(checkValue, overrideDescriptor.valueParameters[i].type)
+                irIs(checkValue, TODO())
             }
         }
 
         if (conditions.isNotEmpty()) {
-            val condition = conditions.fold<IrExpression, IrExpression>(irTrue()) { arg, result ->
-                context.andand(arg, result)
-            }
-
-            +irIfThen(irNot(condition), irBlock {
-                +irReturn(
-                    when (typeSafeBarrierDescription) {
-                        MAP_GET_OR_DEFAULT -> irGet(IrVariableSymbolImpl(bridgeDescriptor.valueParameters[1]))
-                        BuiltinMethodsWithSpecialGenericSignature.TypeSafeBarrierDescription.NULL -> irNull()
-                        INDEX -> IrConstImpl.int(
-                            UNDEFINED_OFFSET, UNDEFINED_OFFSET, context.builtIns.intType, typeSafeBarrierDescription.defaultValue as Int
-                        )
-                        FALSE -> irFalse()
-                    }
-                )
-            }
-            )
+//            val condition = conditions.fold<IrExpression, IrExpression>(irTrue()) { arg, result ->
+//                context.andand(arg, result)
+//            }
+//
+//            +irIfThen(irNot(condition), irBlock {
+//                +irReturn(
+//                    when (typeSafeBarrierDescription) {
+//                        MAP_GET_OR_DEFAULT -> irGet(IrVariableSymbolImpl(bridgeDescriptor.valueParameters[1]))
+//                        BuiltinMethodsWithSpecialGenericSignature.TypeSafeBarrierDescription.NULL -> irNull()
+//                        INDEX -> IrConstImpl.int(
+//                            UNDEFINED_OFFSET, UNDEFINED_OFFSET, TODO(), typeSafeBarrierDescription.defaultValue as Int
+//                        )
+//                        FALSE -> irFalse()
+//                    }
+//                )
+//            }
+//            )
         }
 
     }
