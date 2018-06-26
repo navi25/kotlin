@@ -9,3 +9,7 @@ const val u4: ULong = 4u
 
 const val u5 = 1U
 const val u6: UByte = 0xFFU
+
+const val u7 = 1uL
+const val u8 = 1UL
+const val u9 = 1UL
