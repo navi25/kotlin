@@ -252,6 +252,7 @@ public class IdeStubIndexService extends StubIndexService {
     @Override
     public void indexScript(@NotNull KotlinScriptStub stub, @NotNull IndexSink sink) {
         sink.occurrence(KotlinScriptFqnIndex.getInstance().getKey(), stub.getFqName().asString());
+        sink.occurrence(KotlinScriptByPackageIndex.getInstance().getKey(), stub.getFqName().parent().asString());
     }
 
     @NotNull

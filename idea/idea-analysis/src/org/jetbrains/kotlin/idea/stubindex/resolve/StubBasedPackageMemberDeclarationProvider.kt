@@ -27,7 +27,6 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.safeNameForLazyResolve
-import org.jetbrains.kotlin.resolve.lazy.ResolveSessionUtils
 import org.jetbrains.kotlin.resolve.lazy.data.KtClassInfoUtil
 import org.jetbrains.kotlin.resolve.lazy.data.KtClassLikeInfo
 import org.jetbrains.kotlin.resolve.lazy.data.KtScriptInfo
@@ -51,6 +50,7 @@ class StubBasedPackageMemberDeclarationProvider(
         if (kindFilter.acceptsKinds(DescriptorKindFilter.CLASSIFIERS_MASK)) {
             addFromIndex(KotlinTopLevelClassByPackageIndex.getInstance())
             addFromIndex(KotlinTopLevelTypeAliasByPackageIndex.getInstance())
+            addFromIndex(KotlinScriptByPackageIndex.instance)
         }
 
         if (kindFilter.acceptsKinds(DescriptorKindFilter.FUNCTIONS_MASK)) {

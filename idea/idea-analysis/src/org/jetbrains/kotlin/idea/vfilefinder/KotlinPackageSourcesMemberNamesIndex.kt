@@ -28,7 +28,7 @@ object KotlinPackageSourcesMemberNamesIndex : FileBasedIndexExtension<String, Co
     override fun getValueExternalizer() = StringSetExternalizer
 
     override fun getInputFilter(): FileBasedIndex.InputFilter =
-            FileBasedIndex.InputFilter { file -> file.extension == KotlinFileType.EXTENSION }
+        FileBasedIndex.InputFilter { file -> file.extension == KotlinFileType.EXTENSION || file.extension == "kts" }
 
     override fun getVersion(): Int = 2
 
@@ -40,7 +40,11 @@ object KotlinPackageSourcesMemberNamesIndex : FileBasedIndexExtension<String, Co
             val ktFile = inputData.psiFile as? KtFile ?: return@DataIndexer emptyMap()
             val packageName = ktFile.packageDirective?.fqName?.asString() ?: ""
 
-            mapOf(packageName to ktFile.declarations.mapNotNullTo(hashSetOf(), KtDeclaration::getName))
+            if (!ktFile.isScript()) {
+                mapOf(packageName to ktFile.declarations.mapNotNullTo(hashSetOf(), KtDeclaration::getName))
+            } else {
+                mapOf(packageName to listOfNotNull(ktFile.script?.name))
+            }
         }
 }
 
