@@ -20,8 +20,7 @@ import org.jetbrains.kotlin.metadata.serialization.MutableVersionRequirementTabl
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.DescriptorUtils
-import org.jetbrains.kotlin.resolve.DescriptorUtils.isEnumEntry
-import org.jetbrains.kotlin.resolve.DescriptorUtils.isInterface
+import org.jetbrains.kotlin.resolve.DescriptorUtils.*
 import org.jetbrains.kotlin.resolve.MemberComparator
 import org.jetbrains.kotlin.resolve.RequireKotlinNames
 import org.jetbrains.kotlin.resolve.annotations.hasJvmDefaultAnnotation
@@ -146,12 +145,12 @@ class DescriptorSerializer private constructor(
             writeVersionRequirementForJvmDefaultIfNeeded(classDescriptor, builder)
         }
 
+        extension.serializeClass(classDescriptor, builder, versionRequirementTable)
+
         val versionRequirementTableProto = versionRequirementTable.serialize()
         if (versionRequirementTableProto != null) {
             builder.versionRequirementTable = versionRequirementTableProto
         }
-
-        extension.serializeClass(classDescriptor, builder)
         return builder
     }
 
@@ -641,16 +640,7 @@ class DescriptorSerializer private constructor(
     }
 
     private fun writeVersionRequirement(major: Int, minor: Int, patch: Int, versionKind: ProtoBuf.VersionRequirement.VersionKind): Int {
-        val requirement = ProtoBuf.VersionRequirement.newBuilder().apply {
-            VersionRequirement.Version(major, minor, patch).encode(
-                writeVersion = { version = it },
-                writeVersionFull = { versionFull = it }
-            )
-            if (versionKind != defaultInstanceForType.versionKind) {
-                this.versionKind = versionKind
-            }
-        }
-        return versionRequirementTable[requirement]
+        return writeVersionRequirement(major, minor, patch, versionKind, versionRequirementTable)
     }
 
     // Returns index into versionRequirementTable, or null if there's no @RequireKotlin on the descriptor
@@ -779,5 +769,24 @@ class DescriptorSerializer private constructor(
                     //NOTE: the exact comparator does matter here
                     Collections.sort(this, MemberComparator.INSTANCE)
                 }
+
+        fun writeVersionRequirement(
+            major: Int,
+            minor: Int,
+            patch: Int,
+            versionKind: ProtoBuf.VersionRequirement.VersionKind,
+            versionRequirementTable: MutableVersionRequirementTable
+        ): Int {
+            val requirement = ProtoBuf.VersionRequirement.newBuilder().apply {
+                VersionRequirement.Version(major, minor, patch).encode(
+                    writeVersion = { version = it },
+                    writeVersionFull = { versionFull = it }
+                )
+                if (versionKind != defaultInstanceForType.versionKind) {
+                    this.versionKind = versionKind
+                }
+            }
+            return versionRequirementTable[requirement]
+        }
     }
 }

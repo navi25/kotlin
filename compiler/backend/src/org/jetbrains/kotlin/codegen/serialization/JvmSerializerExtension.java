@@ -24,6 +24,7 @@ import org.jetbrains.kotlin.metadata.ProtoBuf;
 import org.jetbrains.kotlin.metadata.jvm.JvmProtoBuf;
 import org.jetbrains.kotlin.metadata.jvm.deserialization.ClassMapperLite;
 import org.jetbrains.kotlin.metadata.jvm.deserialization.JvmProtoBufUtil;
+import org.jetbrains.kotlin.metadata.serialization.MutableVersionRequirementTable;
 import org.jetbrains.kotlin.name.ClassId;
 import org.jetbrains.kotlin.name.FqName;
 import org.jetbrains.kotlin.protobuf.GeneratedMessageLite;
@@ -77,7 +78,11 @@ public class JvmSerializerExtension extends SerializerExtension {
     }
 
     @Override
-    public void serializeClass(@NotNull ClassDescriptor descriptor, @NotNull ProtoBuf.Class.Builder proto) {
+    public void serializeClass(
+            @NotNull ClassDescriptor descriptor,
+            @NotNull ProtoBuf.Class.Builder proto,
+            @NotNull MutableVersionRequirementTable versionRequirementTable
+    ) {
         if (!moduleName.equals(JvmAbi.DEFAULT_MODULE_NAME)) {
             proto.setExtension(JvmProtoBuf.classModuleName, stringTable.getStringIndex(moduleName));
         }
@@ -85,6 +90,25 @@ public class JvmSerializerExtension extends SerializerExtension {
         Type containerAsmType =
                 DescriptorUtils.isInterface(descriptor) ? typeMapper.mapDefaultImpls(descriptor) : typeMapper.mapClass(descriptor);
         writeLocalProperties(proto, containerAsmType, JvmProtoBuf.classLocalVariable);
+
+        writeVersionRequirementForInterfaceCompanionWithJvmFields(descriptor, proto, versionRequirementTable);
+    }
+
+    // Interface companion which have all properties as @JvmField need the compiler 1.2.60+
+    private static void writeVersionRequirementForInterfaceCompanionWithJvmFields(
+            @NotNull ClassDescriptor classDescriptor,
+            @NotNull ProtoBuf.Class.Builder builder,
+            @NotNull MutableVersionRequirementTable versionRequirementTable
+    ) {
+        if (JvmAbi.isInterfaceCompanionWithBackingFieldsInOuter(classDescriptor)) {
+            //TODO assertion?
+            builder.setVersionRequirement(
+                    DescriptorSerializer.Companion.writeVersionRequirement(
+                            1, 2, 60,
+                            ProtoBuf.VersionRequirement.VersionKind.COMPILER_VERSION,
+                            versionRequirementTable
+                    ));
+        }
     }
 
     @Override
